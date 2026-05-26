@@ -10,8 +10,12 @@ python3 -m venv .venv
 
 Build a macOS `.app` bundle:
 
-```bash
+<!-- ```bash
 chmod +x build_macos_app.sh
+./build_macos_app.sh
+``` -->
+```bash
+.venv/bin/python -m py_compile engine/app.py
 ./build_macos_app.sh
 ```
 

@@ -62,7 +62,12 @@ class SmoothSidebarButton(tk.Canvas):
         self._draw(self.normal_fill)
 
     def _draw(self, fill: str) -> None:
-        self.delete("all")
+        try:
+            if not self.winfo_exists():
+                return
+            self.delete("all")
+        except tk.TclError:
+            return
         self.create_round_rect(1, 1, self.button_width - 1, self.button_height - 1, self.radius, fill=fill)
         self.create_text(
             self.button_width / 2,
@@ -116,7 +121,9 @@ class SmoothSidebarButton(tk.Canvas):
     def _on_release(self, event: tk.Event) -> None:
         is_inside = self._is_inside(event)
         if self._pressed and is_inside:
+            self._pressed = False
             self._invoke()
+            return
         self._pressed = False
         self._draw(self.hover_fill if is_inside else self.normal_fill)
 
