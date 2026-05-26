@@ -1,0 +1,12 @@
+[Event "ChessEngineFromScratch"]
+[Site "Local"]
+[Date "2026.05.26"]
+[Round "?"]
+[White "White"]
+[Black "Black"]
+[Result "0-1"]
+
+1. e4 e5 2. d4 exd4 3. c3 Qe7 4. cxd4 Qxe4+ 5. Qe2 Qxe2+ 6. Kxe2 Nc6 7. Nf3 d5
+8. Nbd2 Bd6 9. Ke3 Nf6 10. Kd3 Ng4 11. Ne5 Nxf2+ 12. Ke3 Nxh1 13. Bb5 a6 14.
+Bxc6+ bxc6 15. Kf4 f6 16. g4 fxe5+ 17. dxe5 O-O+ 18. Kg5 Be7+ 19. Kh5 Rf2 20.
+Nf1 Rxh2+ 21. Nxh2 Ng3# 0-1
