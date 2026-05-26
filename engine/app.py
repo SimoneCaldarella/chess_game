@@ -21,6 +21,12 @@ from graphics.board_view import BOARD_SIZE, BoardView
 SIDEBAR_WIDTH = 320
 WINDOW_WIDTH = BOARD_SIZE + SIDEBAR_WIDTH
 WINDOW_HEIGHT = BOARD_SIZE
+STOCKFISH_DIFFICULTIES = {
+    "Easy": {"skill": 2, "time": 0.1},
+    "Medium": {"skill": 8, "time": 0.25},
+    "Hard": {"skill": 14, "time": 0.5},
+    "Master": {"skill": 20, "time": 1.0},
+}
 
 
 class SmoothSidebarButton(tk.Canvas):
@@ -169,6 +175,7 @@ class ChessApp:
 
         self.status_var = tk.StringVar(value="Select a sprite theme to begin.")
         self.move_list_var = tk.StringVar(value="")
+        self.stockfish_difficulty = tk.StringVar(value="Medium")
 
         self.mode = "menu"
         self.player_color = chess.WHITE
@@ -230,6 +237,7 @@ class ChessApp:
         ttk.Label(self.sidebar, text="New Session", font=("Helvetica", 20, "bold")).pack(anchor="w")
         ttk.Label(self.sidebar, text=f"Pieces: {self.selected_theme.name}").pack(anchor="w", pady=(4, 20))
         self._add_sidebar_button(self.sidebar, text="Play with a Friend", command=self.start_friend_game)
+        self._add_stockfish_difficulty_selector()
         self._add_sidebar_button(self.sidebar, text="Play with Stockfish", command=self.start_stockfish_game)
         self._add_sidebar_button(self.sidebar, text="Load Existing Match", command=self.show_match_loader)
         self._add_sidebar_button(self.sidebar, text="Back to Sprites", command=self.show_sprite_selection, pady=(24, 4))
@@ -250,6 +258,7 @@ class ChessApp:
 
         try:
             self.engine = chess.engine.SimpleEngine.popen_uci(str(engine_path))
+            self._configure_stockfish_difficulty()
         except Exception as exc:
             messagebox.showerror("Stockfish error", f"Could not start Stockfish:\n{exc}")
             return
@@ -313,6 +322,9 @@ class ChessApp:
         black = game.headers.get("Black", "Black")
         ttk.Label(self.sidebar, text=path.name, font=("Helvetica", 18, "bold"), wraplength=280).pack(anchor="w")
         ttk.Label(self.sidebar, text=f"{white} vs {black}", wraplength=280).pack(anchor="w", pady=(4, 12))
+        metadata = self._format_pgn_metadata(game)
+        if metadata:
+            ttk.Label(self.sidebar, text=metadata, wraplength=280, justify=tk.LEFT).pack(anchor="w", pady=(0, 12))
         ttk.Label(self.sidebar, textvariable=self.status_var, wraplength=280).pack(anchor="w", pady=(0, 12))
 
         bottom = ttk.Frame(self.sidebar)
@@ -403,7 +415,7 @@ class ChessApp:
 
         def think() -> None:
             try:
-                result = self.engine.play(board_copy, chess.engine.Limit(time=0.4))
+                result = self.engine.play(board_copy, chess.engine.Limit(time=self._stockfish_think_time()))
                 self.root.after(0, lambda: self.finish_engine_move(result.move))
             except Exception as exc:
                 self.root.after(0, lambda: messagebox.showerror("Stockfish error", str(exc)))
@@ -472,6 +484,8 @@ class ChessApp:
         self._clear_sidebar()
         title = "Friend Game" if self.mode == "friend" else "Stockfish Game"
         ttk.Label(self.sidebar, text=title, font=("Helvetica", 20, "bold")).pack(anchor="w")
+        if self.mode == "stockfish":
+            ttk.Label(self.sidebar, text=f"Difficulty: {self.stockfish_difficulty.get()}").pack(anchor="w", pady=(4, 0))
         ttk.Label(self.sidebar, textvariable=self.status_var, wraplength=280).pack(anchor="w", pady=(8, 12))
         self._add_sidebar_button(self.sidebar, text="Save PGN", command=self.save_current_pgn)
         self._add_sidebar_button(self.sidebar, text="New Session", command=self.show_sprite_selection)
@@ -486,6 +500,16 @@ class ChessApp:
         combo = ttk.Combobox(self.sidebar, textvariable=theme_var, values=theme_names, state="readonly")
         combo.pack(fill=tk.X)
         combo.bind("<<ComboboxSelected>>", lambda _event: self._select_theme(theme_var.get()))
+
+    def _add_stockfish_difficulty_selector(self) -> None:
+        ttk.Label(self.sidebar, text="Stockfish difficulty").pack(anchor="w", pady=(14, 4))
+        combo = ttk.Combobox(
+            self.sidebar,
+            textvariable=self.stockfish_difficulty,
+            values=list(STOCKFISH_DIFFICULTIES),
+            state="readonly",
+        )
+        combo.pack(fill=tk.X, pady=(0, 8))
 
     def _select_theme(self, name: str) -> None:
         self.selected_theme = self._theme_named(name)
@@ -507,6 +531,24 @@ class ChessApp:
             return
         self.load_pgn_file(pgn_files[selection[0]])
 
+    def _format_pgn_metadata(self, game: chess.pgn.Game) -> str:
+        headers = game.headers
+        rows = [
+            ("Event", headers.get("Event")),
+            ("Site", headers.get("Site")),
+            ("Date", headers.get("Date")),
+            ("Event Date", headers.get("EventDate")),
+            ("Round", headers.get("Round")),
+            ("Result", headers.get("Result")),
+            ("White", headers.get("White")),
+            ("Black", headers.get("Black")),
+            ("ECO", headers.get("ECO")),
+            ("White Elo", headers.get("WhiteElo")),
+            ("Black Elo", headers.get("BlackElo")),
+            ("Ply Count", headers.get("PlyCount")),
+        ]
+        return "\n".join(f"{label}: {value}" for label, value in rows if value and value != "?")
+
     def _ensure_stockfish(self) -> Path | None:
         manager = StockfishManager(self.status_var.set)
         engine_path = manager.find_engine()
@@ -525,6 +567,22 @@ class ChessApp:
         except Exception as exc:
             messagebox.showerror("Stockfish download failed", str(exc))
             return None
+
+    def _configure_stockfish_difficulty(self) -> None:
+        if not self.engine:
+            return
+        settings = STOCKFISH_DIFFICULTIES[self.stockfish_difficulty.get()]
+        options = self.engine.options
+        config = {}
+        if "Skill Level" in options:
+            config["Skill Level"] = settings["skill"]
+        if "UCI_LimitStrength" in options:
+            config["UCI_LimitStrength"] = False
+        if config:
+            self.engine.configure(config)
+
+    def _stockfish_think_time(self) -> float:
+        return STOCKFISH_DIFFICULTIES[self.stockfish_difficulty.get()]["time"]
 
     def _can_accept_player_move(self) -> bool:
         if self.mode not in {"friend", "stockfish"}:

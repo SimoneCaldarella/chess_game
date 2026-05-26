@@ -32,7 +32,7 @@ When running as a bundled app, saved PGNs and downloaded Stockfish binaries are 
 The app starts with a sprite-library selection screen. After choosing the pieces, you can:
 
 - play locally with a friend;
-- play against Stockfish;
+- play against Stockfish with selectable difficulty;
 - load a PGN from `assets/matches` and replay it step by step.
 
 During a friend or Stockfish game, use `Save PGN` to save the current match at any point. From source, new PGNs are saved in `assets/matches`; from the bundled app, they are saved in Application Support.
