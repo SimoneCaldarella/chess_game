@@ -46,6 +46,8 @@ class ChessApp:
         self.sidebar.pack_propagate(False)
 
         self.status_var = tk.StringVar(value="Select a sprite theme to begin.")
+        self.sidebar_button_style = "Sidebar.TButton"
+        self._configure_sidebar_button_style()
         self.move_list_var = tk.StringVar(value="")
 
         self.mode = "menu"
@@ -72,6 +74,25 @@ class ChessApp:
         self._shutdown_engine()
         self.root.destroy()
 
+
+    def _configure_sidebar_button_style(self) -> None:
+        style = ttk.Style(self.root)
+        style.configure(self.sidebar_button_style, padding=(10, 4))
+
+    def _add_sidebar_button(
+        self,
+        parent: tk.Widget,
+        text: str,
+        command,
+        pady=5,
+        side=tk.TOP,
+        padx=(28, 28),
+        fill=tk.X,
+    ) -> None:
+        kwargs = {"side": side, "pady": pady, "padx": padx}
+        if fill is not None:
+            kwargs["fill"] = fill
+        ttk.Button(parent, text=text, command=command, style=self.sidebar_button_style).pack(**kwargs)
     def show_sprite_selection(self) -> None:
         self.mode = "sprite_selection"
         self.board_view.stop_endgame_animation()
@@ -83,7 +104,7 @@ class ChessApp:
         ttk.Label(self.sidebar, text="Choose the pieces before starting.").pack(anchor="w", pady=(4, 16))
 
         self._add_theme_selector()
-        ttk.Button(self.sidebar, text="Continue", command=self.show_mode_selection).pack(fill=tk.X, pady=(24, 8))
+        self._add_sidebar_button(self.sidebar, text="Continue", command=self.show_mode_selection, pady=(24, 8))
         ttk.Label(self.sidebar, textvariable=self.status_var, wraplength=280).pack(anchor="w", pady=(16, 0))
 
         self.board_view.load_theme(self.selected_theme)
@@ -96,10 +117,10 @@ class ChessApp:
 
         ttk.Label(self.sidebar, text="New Session", font=("Helvetica", 20, "bold")).pack(anchor="w")
         ttk.Label(self.sidebar, text=f"Pieces: {self.selected_theme.name}").pack(anchor="w", pady=(4, 20))
-        ttk.Button(self.sidebar, text="Play with a Friend", command=self.start_friend_game).pack(fill=tk.X, pady=5)
-        ttk.Button(self.sidebar, text="Play with Stockfish", command=self.start_stockfish_game).pack(fill=tk.X, pady=5)
-        ttk.Button(self.sidebar, text="Load Existing Match", command=self.show_match_loader).pack(fill=tk.X, pady=5)
-        ttk.Button(self.sidebar, text="Back to Sprites", command=self.show_sprite_selection).pack(fill=tk.X, pady=(28, 5))
+        self._add_sidebar_button(self.sidebar, text="Play with a Friend", command=self.start_friend_game, pady=5)
+        self._add_sidebar_button(self.sidebar, text="Play with Stockfish", command=self.start_stockfish_game, pady=5)
+        self._add_sidebar_button(self.sidebar, text="Load Existing Match", command=self.show_match_loader, pady=5)
+        self._add_sidebar_button(self.sidebar, text="Back to Sprites", command=self.show_sprite_selection, pady=(28, 5))
         ttk.Label(self.sidebar, textvariable=self.status_var, wraplength=280).pack(anchor="w", pady=(16, 0))
 
         self.status_var.set("Choose how you want to play.")
@@ -140,13 +161,14 @@ class ChessApp:
         if pgn_files:
             listbox.selection_set(0)
 
-        ttk.Button(
+        self._add_sidebar_button(
             self.sidebar,
             text="Load Selected",
             command=lambda: self._load_listbox_selection(listbox, pgn_files),
-        ).pack(fill=tk.X, pady=(12, 5))
-        ttk.Button(self.sidebar, text="Browse PGN...", command=self.browse_pgn).pack(fill=tk.X, pady=5)
-        ttk.Button(self.sidebar, text="Back", command=self.show_mode_selection).pack(fill=tk.X, pady=(20, 5))
+            pady=(12, 5),
+        )
+        self._add_sidebar_button(self.sidebar, text="Browse PGN...", command=self.browse_pgn, pady=5)
+        self._add_sidebar_button(self.sidebar, text="Back", command=self.show_mode_selection, pady=(20, 5))
 
         self.status_var.set("PGN files are read from assets/matches.")
         self.draw_board()
@@ -183,8 +205,8 @@ class ChessApp:
 
         bottom = ttk.Frame(self.sidebar)
         bottom.pack(side=tk.BOTTOM, fill=tk.X)
-        ttk.Button(bottom, text="Next Step", command=self.next_replay_step).pack(side=tk.RIGHT, pady=8)
-        ttk.Button(bottom, text="New Session", command=self.show_sprite_selection).pack(side=tk.LEFT, pady=8)
+        self._add_sidebar_button(bottom, text="Next Step", command=self.next_replay_step, side=tk.RIGHT, pady=8, padx=(0, 8), fill=None)
+        self._add_sidebar_button(bottom, text="New Session", command=self.show_sprite_selection, side=tk.LEFT, pady=8, padx=(8, 0), fill=None)
 
         self.status_var.set(f"Move 0 of {len(self.replay_moves)}.")
         self.draw_board()
@@ -339,8 +361,8 @@ class ChessApp:
         title = "Friend Game" if self.mode == "friend" else "Stockfish Game"
         ttk.Label(self.sidebar, text=title, font=("Helvetica", 20, "bold")).pack(anchor="w")
         ttk.Label(self.sidebar, textvariable=self.status_var, wraplength=280).pack(anchor="w", pady=(8, 12))
-        ttk.Button(self.sidebar, text="Save PGN", command=self.save_current_pgn).pack(fill=tk.X, pady=5)
-        ttk.Button(self.sidebar, text="New Session", command=self.show_sprite_selection).pack(fill=tk.X, pady=5)
+        self._add_sidebar_button(self.sidebar, text="Save PGN", command=self.save_current_pgn, pady=5)
+        self._add_sidebar_button(self.sidebar, text="New Session", command=self.show_sprite_selection, pady=5)
         ttk.Separator(self.sidebar).pack(fill=tk.X, pady=14)
         ttk.Label(self.sidebar, text="Moves", font=("Helvetica", 12, "bold")).pack(anchor="w")
         ttk.Label(self.sidebar, textvariable=self.move_list_var, wraplength=280, justify=tk.LEFT).pack(anchor="w", pady=(6, 0))
