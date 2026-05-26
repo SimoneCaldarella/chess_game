@@ -3,18 +3,23 @@
 Run the graphical chess game:
 
 ```bash
-python3 main.py
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python main.py
 ```
 
 Build a macOS `.app` bundle:
 
 ```bash
-python3 -m pip install pyinstaller
 chmod +x build_macos_app.sh
 ./build_macos_app.sh
 ```
 
 The standalone app is created at `dist/ChessEngineFromScratch.app`.
+
+The build script creates a local `.venv`, installs the required Python packages there, and bundles them into the `.app`. The standalone app does not install Python libraries globally on the target Mac.
+
+Using a local `.venv` avoids externally managed Python errors from Homebrew or system Python. Pillow is needed by the app for image rendering and lets PyInstaller convert the `.ico` icon into the macOS app icon format.
 
 The bundle is ad-hoc signed for local use, not notarized for public distribution. On another Mac, Gatekeeper may ask for approval the first time it opens.
 

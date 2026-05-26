@@ -9,6 +9,7 @@ import chess.pgn
 import tkinter as tk
 from PIL import Image, ImageDraw, ImageTk
 from tkinter import filedialog, messagebox, simpledialog, ttk
+from typing import Callable
 
 from engine.assets import SpriteLibrary, SpriteTheme
 from engine.paths import APP_ICON_PATH, MATCHES_DIR, PROJECT_ROOT
@@ -20,6 +21,120 @@ from graphics.board_view import BOARD_SIZE, BoardView
 SIDEBAR_WIDTH = 320
 WINDOW_WIDTH = BOARD_SIZE + SIDEBAR_WIDTH
 WINDOW_HEIGHT = BOARD_SIZE
+
+
+class SmoothSidebarButton(tk.Canvas):
+    def __init__(
+        self,
+        parent: tk.Widget,
+        text: str,
+        command: Callable[[], None],
+        width: int = 204,
+        height: int = 24,
+    ) -> None:
+        super().__init__(
+            parent,
+            width=width,
+            height=height,
+            highlightthickness=0,
+            borderwidth=0,
+            background=self._parent_background(parent),
+            cursor="hand2",
+            takefocus=True,
+        )
+        self.command = command
+        self.text = text
+        self.button_width = width
+        self.button_height = height
+        self.radius = 8
+        self.normal_fill = "#625d68"
+        self.hover_fill = "#6d6873"
+        self.pressed_fill = "#56515d"
+        self.text_fill = "#eeeeee"
+        self._pressed = False
+
+        self.bind("<Enter>", lambda _event: self._draw(self.hover_fill))
+        self.bind("<Leave>", self._on_leave)
+        self.bind("<ButtonPress-1>", self._on_press)
+        self.bind("<ButtonRelease-1>", self._on_release)
+        self.bind("<Return>", lambda _event: self._invoke())
+        self.bind("<space>", lambda _event: self._invoke())
+        self._draw(self.normal_fill)
+
+    def _draw(self, fill: str) -> None:
+        self.delete("all")
+        self.create_round_rect(1, 1, self.button_width - 1, self.button_height - 1, self.radius, fill=fill)
+        self.create_text(
+            self.button_width / 2,
+            self.button_height / 2,
+            text=self.text,
+            fill=self.text_fill,
+            font=("Helvetica", 12, "bold"),
+        )
+
+    def create_round_rect(self, x1: int, y1: int, x2: int, y2: int, radius: int, fill: str) -> None:
+        self.create_polygon(
+            x1 + radius,
+            y1,
+            x2 - radius,
+            y1,
+            x2,
+            y1,
+            x2,
+            y1 + radius,
+            x2,
+            y2 - radius,
+            x2,
+            y2,
+            x2 - radius,
+            y2,
+            x1 + radius,
+            y2,
+            x1,
+            y2,
+            x1,
+            y2 - radius,
+            x1,
+            y1 + radius,
+            x1,
+            y1,
+            smooth=True,
+            splinesteps=12,
+            fill=fill,
+            outline="#77717d",
+        )
+
+    def _on_leave(self, _event: tk.Event) -> None:
+        self._pressed = False
+        self._draw(self.normal_fill)
+
+    def _on_press(self, _event: tk.Event) -> None:
+        self.focus_set()
+        self._pressed = True
+        self._draw(self.pressed_fill)
+
+    def _on_release(self, event: tk.Event) -> None:
+        is_inside = self._is_inside(event)
+        if self._pressed and is_inside:
+            self._invoke()
+        self._pressed = False
+        self._draw(self.hover_fill if is_inside else self.normal_fill)
+
+    def _is_inside(self, event: tk.Event) -> bool:
+        return 0 <= event.x <= self.button_width and 0 <= event.y <= self.button_height
+
+    def _invoke(self) -> str:
+        self.command()
+        return "break"
+
+    @staticmethod
+    def _parent_background(parent: tk.Widget) -> str:
+        try:
+            return parent.cget("background")
+        except tk.TclError:
+            pass
+        background = ttk.Style(parent).lookup("TFrame", "background")
+        return background or "#2f2f2f"
 
 
 class ChessApp:
@@ -46,8 +161,6 @@ class ChessApp:
         self.sidebar.pack_propagate(False)
 
         self.status_var = tk.StringVar(value="Select a sprite theme to begin.")
-        self.sidebar_button_style = "Sidebar.TButton"
-        self._configure_sidebar_button_style()
         self.move_list_var = tk.StringVar(value="")
 
         self.mode = "menu"
@@ -74,25 +187,17 @@ class ChessApp:
         self._shutdown_engine()
         self.root.destroy()
 
-
-    def _configure_sidebar_button_style(self) -> None:
-        style = ttk.Style(self.root)
-        style.configure(self.sidebar_button_style, padding=(10, 4))
-
     def _add_sidebar_button(
         self,
         parent: tk.Widget,
         text: str,
-        command,
-        pady=5,
+        command: Callable[[], None],
+        pady=4,
         side=tk.TOP,
-        padx=(28, 28),
-        fill=tk.X,
+        width: int = 204,
     ) -> None:
-        kwargs = {"side": side, "pady": pady, "padx": padx}
-        if fill is not None:
-            kwargs["fill"] = fill
-        ttk.Button(parent, text=text, command=command, style=self.sidebar_button_style).pack(**kwargs)
+        SmoothSidebarButton(parent, text=text, command=command, width=width).pack(side=side, pady=pady)
+
     def show_sprite_selection(self) -> None:
         self.mode = "sprite_selection"
         self.board_view.stop_endgame_animation()
@@ -104,7 +209,7 @@ class ChessApp:
         ttk.Label(self.sidebar, text="Choose the pieces before starting.").pack(anchor="w", pady=(4, 16))
 
         self._add_theme_selector()
-        self._add_sidebar_button(self.sidebar, text="Continue", command=self.show_mode_selection, pady=(24, 8))
+        self._add_sidebar_button(self.sidebar, text="Continue", command=self.show_mode_selection, pady=(20, 6))
         ttk.Label(self.sidebar, textvariable=self.status_var, wraplength=280).pack(anchor="w", pady=(16, 0))
 
         self.board_view.load_theme(self.selected_theme)
@@ -117,10 +222,10 @@ class ChessApp:
 
         ttk.Label(self.sidebar, text="New Session", font=("Helvetica", 20, "bold")).pack(anchor="w")
         ttk.Label(self.sidebar, text=f"Pieces: {self.selected_theme.name}").pack(anchor="w", pady=(4, 20))
-        self._add_sidebar_button(self.sidebar, text="Play with a Friend", command=self.start_friend_game, pady=5)
-        self._add_sidebar_button(self.sidebar, text="Play with Stockfish", command=self.start_stockfish_game, pady=5)
-        self._add_sidebar_button(self.sidebar, text="Load Existing Match", command=self.show_match_loader, pady=5)
-        self._add_sidebar_button(self.sidebar, text="Back to Sprites", command=self.show_sprite_selection, pady=(28, 5))
+        self._add_sidebar_button(self.sidebar, text="Play with a Friend", command=self.start_friend_game)
+        self._add_sidebar_button(self.sidebar, text="Play with Stockfish", command=self.start_stockfish_game)
+        self._add_sidebar_button(self.sidebar, text="Load Existing Match", command=self.show_match_loader)
+        self._add_sidebar_button(self.sidebar, text="Back to Sprites", command=self.show_sprite_selection, pady=(24, 4))
         ttk.Label(self.sidebar, textvariable=self.status_var, wraplength=280).pack(anchor="w", pady=(16, 0))
 
         self.status_var.set("Choose how you want to play.")
@@ -165,10 +270,10 @@ class ChessApp:
             self.sidebar,
             text="Load Selected",
             command=lambda: self._load_listbox_selection(listbox, pgn_files),
-            pady=(12, 5),
+            pady=(10, 4),
         )
-        self._add_sidebar_button(self.sidebar, text="Browse PGN...", command=self.browse_pgn, pady=5)
-        self._add_sidebar_button(self.sidebar, text="Back", command=self.show_mode_selection, pady=(20, 5))
+        self._add_sidebar_button(self.sidebar, text="Browse PGN...", command=self.browse_pgn)
+        self._add_sidebar_button(self.sidebar, text="Back", command=self.show_mode_selection, pady=(16, 4))
 
         self.status_var.set("PGN files are read from assets/matches.")
         self.draw_board()
@@ -205,8 +310,8 @@ class ChessApp:
 
         bottom = ttk.Frame(self.sidebar)
         bottom.pack(side=tk.BOTTOM, fill=tk.X)
-        self._add_sidebar_button(bottom, text="Next Step", command=self.next_replay_step, side=tk.RIGHT, pady=8, padx=(0, 8), fill=None)
-        self._add_sidebar_button(bottom, text="New Session", command=self.show_sprite_selection, side=tk.LEFT, pady=8, padx=(8, 0), fill=None)
+        self._add_sidebar_button(bottom, text="Next Step", command=self.next_replay_step, side=tk.RIGHT, width=126)
+        self._add_sidebar_button(bottom, text="New Session", command=self.show_sprite_selection, side=tk.LEFT, width=126)
 
         self.status_var.set(f"Move 0 of {len(self.replay_moves)}.")
         self.draw_board()
@@ -361,8 +466,8 @@ class ChessApp:
         title = "Friend Game" if self.mode == "friend" else "Stockfish Game"
         ttk.Label(self.sidebar, text=title, font=("Helvetica", 20, "bold")).pack(anchor="w")
         ttk.Label(self.sidebar, textvariable=self.status_var, wraplength=280).pack(anchor="w", pady=(8, 12))
-        self._add_sidebar_button(self.sidebar, text="Save PGN", command=self.save_current_pgn, pady=5)
-        self._add_sidebar_button(self.sidebar, text="New Session", command=self.show_sprite_selection, pady=5)
+        self._add_sidebar_button(self.sidebar, text="Save PGN", command=self.save_current_pgn)
+        self._add_sidebar_button(self.sidebar, text="New Session", command=self.show_sprite_selection)
         ttk.Separator(self.sidebar).pack(fill=tk.X, pady=14)
         ttk.Label(self.sidebar, text="Moves", font=("Helvetica", 12, "bold")).pack(anchor="w")
         ttk.Label(self.sidebar, textvariable=self.move_list_var, wraplength=280, justify=tk.LEFT).pack(anchor="w", pady=(6, 0))
