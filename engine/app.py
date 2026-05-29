@@ -153,7 +153,7 @@ class SmoothSidebarButton(tk.Canvas):
 class ChessApp:
     def __init__(self) -> None:
         self.root = tk.Tk()
-        self.root.title("Chess Engine From Scratch")
+        self.root.title("mylovelychessgame")
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
         self.root.minsize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.root.protocol("WM_DELETE_WINDOW", self.close)

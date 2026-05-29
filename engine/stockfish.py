@@ -36,7 +36,7 @@ class StockfishManager:
         self.status("Finding latest Stockfish release...")
         req = urllib.request.Request(
             "https://api.github.com/repos/official-stockfish/Stockfish/releases/latest",
-            headers={"User-Agent": "ChessEngineFromScratch"},
+            headers={"User-Agent": "mylovelychessgame"},
         )
         with urllib.request.urlopen(req, timeout=30) as response:
             release = json.loads(response.read().decode("utf-8"))

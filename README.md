@@ -1,4 +1,4 @@
-# Chess Engine From Scratch
+# mylovelychessgame
 
 Run the graphical chess game:
 
@@ -19,7 +19,7 @@ chmod +x build_macos_app.sh
 ./build_macos_app.sh
 ```
 
-The standalone app is created at `dist/ChessEngineFromScratch.app`.
+The standalone app is created at `dist/mylovelychessgame.app`.
 
 The build script creates a local `.venv`, installs the required Python packages there, and bundles them into the `.app`. The standalone app does not install Python libraries globally on the target Mac.
 
@@ -27,7 +27,7 @@ Using a local `.venv` avoids externally managed Python errors from Homebrew or s
 
 The bundle is ad-hoc signed for local use, not notarized for public distribution. On another Mac, Gatekeeper may ask for approval the first time it opens.
 
-When running as a bundled app, saved PGNs and downloaded Stockfish binaries are stored under `~/Library/Application Support/ChessEngineFromScratch/`.
+When running as a bundled app, saved PGNs and downloaded Stockfish binaries are stored under `~/Library/Application Support/mylovelychessgame/`.
 
 The app starts with a sprite-library selection screen. After choosing the pieces, you can:
 

@@ -4,7 +4,7 @@ import sys
 
 if getattr(sys, "frozen", False):
     PROJECT_ROOT = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
-    USER_DATA_DIR = Path.home() / "Library" / "Application Support" / "ChessEngineFromScratch"
+    USER_DATA_DIR = Path.home() / "Library" / "Application Support" / "mylovelychessgame"
 else:
     PROJECT_ROOT = Path(__file__).resolve().parents[1]
     USER_DATA_DIR = PROJECT_ROOT
