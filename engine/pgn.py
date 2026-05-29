@@ -41,7 +41,7 @@ class PgnLibrary:
 
 def create_local_game() -> chess.pgn.Game:
     game = chess.pgn.Game()
-    game.headers["Event"] = "ChessEngineFromScratch"
+    game.headers["Event"] = "mylovelychessgame"
     game.headers["Site"] = "Local"
     game.headers["Date"] = time.strftime("%Y.%m.%d")
     game.headers["White"] = "White"
